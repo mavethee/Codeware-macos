@@ -1,1 +1,0 @@
-public abstract native class questEmbeddedGraphNodeDefinition extends questSignalStoppingNodeDefinition {}

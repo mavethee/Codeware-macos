@@ -1,1 +1,0 @@
-public native class gameEffectObjectProvider_QuerySphere_GrowOverTime extends gameEffectObjectProvider_QuerySphere {}

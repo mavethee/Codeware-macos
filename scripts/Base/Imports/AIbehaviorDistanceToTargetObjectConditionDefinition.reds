@@ -1,1 +1,0 @@
-public native class AIbehaviorDistanceToTargetObjectConditionDefinition extends AIbehaviorDistanceToTargetConditionDefinition {}

@@ -1,1 +1,0 @@
-public native class gameEffectObjectFilter_HitRepresentation_Quickhack extends gameEffectObjectFilter_HitRepresentation {}

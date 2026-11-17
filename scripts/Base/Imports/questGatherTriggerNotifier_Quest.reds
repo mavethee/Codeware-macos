@@ -1,1 +1,0 @@
-public native class questGatherTriggerNotifier_Quest extends worldITriggerAreaNotifer {}

@@ -1,1 +1,0 @@
-public native class animMotionTableProvider_Animation extends animIMotionTableProvider {}

@@ -1,1 +1,0 @@
-public native class questEnableBraindanceFinish_NodeType extends questIUIManagerNodeType {}

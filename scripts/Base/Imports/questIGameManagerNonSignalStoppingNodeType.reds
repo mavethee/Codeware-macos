@@ -1,1 +1,0 @@
-public abstract native class questIGameManagerNonSignalStoppingNodeType extends questIGameManagerNodeType {}

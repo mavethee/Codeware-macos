@@ -1,1 +1,0 @@
-public native class gameEffectVectorEvaluator_HitNormal extends gameEffectVectorEvaluator {}

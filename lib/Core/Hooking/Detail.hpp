@@ -43,7 +43,7 @@ struct HookResult
         {
 #ifdef __APPLE__
             // macOS port (in progress): a feature whose hook can't be installed is skipped, not fatal.
-            fprintf(stderr, "[ArchiveXL macOS] hook not installed (%s)\n", aMessage ? aMessage : "address unresolved");
+            fprintf(stderr, "[Codeware macOS] hook not installed (%s)\n", aMessage ? aMessage : "address unresolved");
             return;
 #endif
             if (aMessage)

@@ -1,1 +1,0 @@
-public native class audioAmbientAreaNotifierInstance extends worldITriggerAreaNotiferInstance {}

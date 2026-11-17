@@ -1,1 +1,0 @@
-public native class gameTransformAnimatorSaveSystem extends gameITransformAnimatorSaveSystem {}

@@ -1,1 +1,0 @@
-public native class questPrepareBlendCamera_NodeType extends questISceneManagerNodeType {}

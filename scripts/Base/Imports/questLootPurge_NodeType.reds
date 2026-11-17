@@ -1,1 +1,0 @@
-public native class questLootPurge_NodeType extends questIGameManagerNonSignalStoppingNodeType {}

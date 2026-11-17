@@ -20,7 +20,10 @@ requires std::is_base_of_v<IGameSystem, T> && std::is_base_of_v<T, U>
 U* GetGameSystem()
 {
     static const auto s_type = GetType<T>();
-    auto& gameInstance = CGameEngine::Get()->framework->gameInstance;
+    auto engine = CGameEngine::Get();
+    if (!engine || engine->engineState < EEngineState::Running || !engine->framework || !engine->framework->gameInstance)
+        return nullptr;
+    auto& gameInstance = engine->framework->gameInstance;
     return reinterpret_cast<U*>(gameInstance->GetSystem(s_type));
 }
 
@@ -29,7 +32,10 @@ requires std::is_base_of_v<worldIRuntimeSystem, T> && std::is_base_of_v<T, U> &&
 U* GetRuntimeSystem()
 {
     constexpr auto systemOffset = RuntimeSystemMapping<T>::offset * sizeof(Handle<T>);
-    const auto& runtimeSceneAddr = CGameEngine::Get()->framework->unk18;
+    auto engine = CGameEngine::Get();
+    if (!engine || engine->engineState < EEngineState::Running || !engine->framework || !engine->framework->unk18)
+        return nullptr;
+    const auto& runtimeSceneAddr = engine->framework->unk18;
     return reinterpret_cast<Handle<U>*>(runtimeSceneAddr + systemOffset)->instance;
 }
 }

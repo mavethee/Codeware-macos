@@ -1,1 +1,0 @@
-public native class gameuiCharacterCustomizationState extends gameuiICharacterCustomizationState {}

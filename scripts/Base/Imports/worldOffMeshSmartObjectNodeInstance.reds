@@ -1,1 +1,0 @@
-public native class worldOffMeshSmartObjectNodeInstance extends worldOffMeshConnectionNodeInstance {}

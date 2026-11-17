@@ -64,5 +64,5 @@ public native let FavoritesLoadedReady: inkFavoriteLoadResult;
 @addField(inkISystemRequestsHandler)
 public native let DeleteSreenshotComplete: inkDeleteScreenshotResult;
 
-@addField(inkISystemRequestsHandler)
-public native let MarketingConsentPopupTypeResult: inkMarketingConsentPopupTypeResult;
+// @addField(inkISystemRequestsHandler)
+// public native let MarketingConsentPopupTypeResult: inkMarketingConsentPopupTypeResult;

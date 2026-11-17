@@ -1,1 +1,0 @@
-public native class AIbehaviorIsBeingSummonedDefinition extends AIbehaviorVehicleExpressionDefinition {}

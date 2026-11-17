@@ -171,7 +171,11 @@ struct FactManager
     {
 #ifndef NDEBUG
         if (GetFact(NamedFactStore, aFact) != 0)
+#if defined(_MSC_VER)
             __nop();
+#else
+            asm volatile("nop");
+#endif
 #endif
         SetFact(NamedFactStore, aFact, 0);
     }
@@ -182,7 +186,11 @@ struct FactManager
         {
 #ifndef NDEBUG
             if (GetFact(store, aFact) != 0)
+#if defined(_MSC_VER)
                 __nop();
+#else
+                asm volatile("nop");
+#endif
 #endif
             SetFact(store, aFact, 0);
         }

@@ -1,1 +1,0 @@
-public native class gameEffectObjectFilter_HitRepresentation_Sphere extends gameEffectObjectFilter_HitRepresentation {}

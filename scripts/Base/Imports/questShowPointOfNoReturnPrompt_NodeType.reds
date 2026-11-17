@@ -1,1 +1,0 @@
-public native class questShowPointOfNoReturnPrompt_NodeType extends questIUIManagerNodeType {}

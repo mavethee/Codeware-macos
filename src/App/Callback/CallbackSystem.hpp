@@ -53,7 +53,7 @@ public:
             if (callbacksIt == m_callbacksByEvent.end())
                 return false;
 
-            callbacks = callbacksIt.value();
+            callbacks = callbacksIt->second;
         }
 
         const auto event = Red::MakeHandle<Event>(aEventName, std::forward<Args>(aArgs)...);

@@ -1,1 +1,0 @@
-public native class gameEffectObjectProvider_ProjectileHitEvent extends EffectObjectProvider {}

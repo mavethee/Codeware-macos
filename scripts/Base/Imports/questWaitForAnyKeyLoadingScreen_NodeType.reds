@@ -1,1 +1,0 @@
-public native class questWaitForAnyKeyLoadingScreen_NodeType extends questIUIManagerNodeType {}

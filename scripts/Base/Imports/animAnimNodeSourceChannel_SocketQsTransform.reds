@@ -1,1 +1,0 @@
-public native class animAnimNodeSourceChannel_SocketQsTransform extends animIAnimNodeSourceChannel_QsTransform {}

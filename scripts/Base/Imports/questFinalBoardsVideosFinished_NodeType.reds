@@ -1,1 +1,0 @@
-public native class questFinalBoardsVideosFinished_NodeType extends questIUIManagerNodeType {}

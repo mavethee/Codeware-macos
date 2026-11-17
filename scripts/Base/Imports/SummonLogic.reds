@@ -1,1 +1,0 @@
-public importonly struct SummonLogic {}

@@ -1,1 +1,0 @@
-public native class entTriggerNotifier_EntityInstance extends worldITriggerAreaNotiferInstance {}

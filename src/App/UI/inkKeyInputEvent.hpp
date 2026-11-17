@@ -40,5 +40,8 @@ RTTI_DEFINE_CLASS(App::inkKeyInputEvent, {
     RTTI_GETTER(key);
     RTTI_GETTER(action);
     RTTI_GETTER(character);
+    RTTI_PROPERTY(key);
+    RTTI_PROPERTY(action);
+    RTTI_PROPERTY(character);
     RTTI_METHOD(IsCharacter);
 });

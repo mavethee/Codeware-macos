@@ -509,16 +509,8 @@ public:
         if (name != aAlias)
         {
             auto rtti = CRTTISystem::Get();
-#ifdef __APPLE__
-            // macOS: the game's HashMap layout differs from the SDK's; register through the game's own method.
-            rtti->RegisterScriptName(name, aAlias);
-#else
-            if (rtti->scriptToNative.Get(aAlias) == nullptr)
-            {
-                rtti->scriptToNative.Insert(aAlias, name);
-                rtti->nativeToScript.Insert(name, aAlias);
-            }
-#endif
+            rtti->scriptToNative.InsertOrAssign(aAlias, name);
+            rtti->nativeToScript.InsertOrAssign(name, aAlias);
         }
     }
 
@@ -535,19 +527,22 @@ public:
     {
         auto* ptr = reinterpret_cast<ScriptingFunction_t<TRet*>>(aFunc);
 
-        CClassFunction* func;
         if constexpr (std::is_same_v<TContext, IScriptable>)
         {
-            func = CClassStaticFunction::Create(this, aName, aName, ptr, aFlags);
+            auto func = CClassStaticFunction::Create(this, aName, aName, ptr, aFlags);
+
+            RegisterFunction(func);
+
+            return func;
         }
         else
         {
-            func = CClassFunction::Create(this, aName, aName, ptr, aFlags);
+            auto func = CClassFunction::Create(this, aName, aName, ptr, aFlags);
+
+            RegisterFunction(func);
+
+            return func;
         }
-
-        RegisterFunction(func);
-
-        return func;
     }
 
     template<auto AFunction>
@@ -667,12 +662,58 @@ public:
 
         return func;
     }
+
+    void RegisterFunction(CClassFunction* aFunc)
+    {
+        if (aFunc->flags.isStatic)
+        {
+            auto functionExists = false;
+
+            for (auto& existingFunc : staticFuncs)
+            {
+                if (existingFunc->shortName == aFunc->shortName)
+                {
+                    existingFunc = static_cast<CClassStaticFunction*>(aFunc);
+                    functionExists = true;
+                    break;
+                }
+            }
+
+            if (!functionExists)
+            {
+                staticFuncs.PushBack(static_cast<CClassStaticFunction*>(aFunc));
+            }
+        }
+        else
+        {
+            auto functionExists = false;
+
+            for (auto& existingFunc : funcs)
+            {
+                if (existingFunc->shortName == aFunc->shortName)
+                {
+                    existingFunc = aFunc;
+                    functionExists = true;
+                    break;
+                }
+            }
+
+            if (!functionExists)
+            {
+                funcs.PushBack(aFunc);
+            }
+        }
+    }
 };
 
 template<typename TClass>
 class ClassDescriptorDefaultImpl : public ClassDescriptor<TClass>
 {
+#if defined(__APPLE__)
+    bool IsEqual(const void* aLhs, const void* aRhs, uint32_t a3) final // 48
+#else
     const bool IsEqual(const void* aLhs, const void* aRhs, uint32_t a3) final // 48
+#endif
     {
         if constexpr (Detail::IsConstructionForwarded<TClass>)
         {
@@ -940,6 +981,14 @@ struct SystemBuilder
     static inline void ScriptGetter(Red::IScriptable* aContext, Red::CStackFrame* aFrame,
                                     Red::Handle<Red::IScriptable>* aRet, int64_t)
     {
+        constexpr uint8_t ParamEndOp = 38;
+
+        if (*aFrame->code != ParamEndOp)
+        {
+            ScriptGameInstance gameInstance;
+            Red::GetParameter(aFrame, &gameInstance);
+        }
+
         ++aFrame->code;
 
         if (aRet)
@@ -950,11 +999,11 @@ struct SystemBuilder
             }
             else
             {
-                const auto framework = CGameEngine::Get()->framework;
-                if (framework && framework->gameInstance)
+                const auto engine = CGameEngine::Get();
+                if (engine && engine->engineState >= EEngineState::Running && engine->framework && engine->framework->gameInstance)
                 {
                     static const auto systemType = GetType<TSystem>();
-                    const auto systemInstance = framework->gameInstance->systemMap.Get(systemType);
+                    const auto systemInstance = engine->framework->gameInstance->systemMap.Get(systemType);
                     if (systemInstance)
                     {
                         *aRet = *systemInstance;
@@ -970,42 +1019,32 @@ struct SystemBuilder
         constexpr auto systemTypeStr = GetTypeNameStr<TSystem>();
         constexpr auto systemNameStr = Detail::UpFirstConstStr<systemTypeStr.size()>(systemTypeStr.data());
         constexpr auto getterNameStr = Detail::ConcatConstStr<3, systemNameStr.size() - 1>("Get", systemNameStr.data());
+        constexpr auto getterName = Red::CName(getterNameStr.data());
 
         auto gameType = GetClass<ScriptGameInstance>();
         auto getterFunc = CClassStaticFunction::Create(gameType, getterNameStr.data(), getterNameStr.data(), &ScriptGetter);
         getterFunc->SetReturnType(CNamePool::Add(systemRefStr.data()));
 
-        gameType->staticFuncs.PushBack(getterFunc);
+        auto getterExists = false;
+
+        for (auto& existingFunc : gameType->staticFuncs)
+        {
+            if (existingFunc->shortName == getterFunc->shortName)
+            {
+                existingFunc = getterFunc;
+                getterExists = true;
+                break;
+            }
+        }
+
+        if (!getterExists)
+        {
+            gameType->staticFuncs.PushBack(getterFunc);
+        }
     }
 
     static inline void RegisterSystem()
     {
-        auto engine = CGameEngine::Get();
-
-        if (!engine || !engine->framework)
-        {
-            TypeInfoRegistrar::AddDescribeCallback(&RegisterSystem);
-            return;
-        }
-
-        auto gameInstance = engine->framework->gameInstance;
-        auto systemType = GetClass<TSystem>();
-
-        if (gameInstance->systemMap.Get(systemType))
-            return;
-
-        auto systemInstance = BuildSystem();
-
-        if (!systemInstance)
-            return;
-
-        JobHandle job{};
-        systemInstance->gameInstance = gameInstance;
-        systemInstance->OnInitialize(job);
-
-        gameInstance->systemMap.Insert(systemType, systemInstance);
-        gameInstance->systemImplementations.Insert(systemType, systemType);
-        gameInstance->systemInstances.EmplaceBack(reinterpret_cast<const Handle<IScriptable>&>(systemInstance)); // clang: converting ctor is ambiguous
     }
 
     static inline Handle<TSystem> BuildSystem()
@@ -1031,16 +1070,9 @@ struct ClassDefinition
     static inline void RegisterType()
     {
         constexpr auto name = GetTypeNameStr<TClass>();
-#ifdef __APPLE__
-        if (Detail::IsSkippedType(name.data()) || Detail::IsSkippedType("ALL_DEFINE"))
-            return;
-#endif
 
         auto* type = Red::Memory::RTTIAllocator::Get()->Alloc<Descriptor>();
         new (type) Descriptor();
-#ifdef __APPLE__
-        if (FILE* lf = fopen("/tmp/axl_alloc.log", "a")) { fprintf(lf, "CLASS %s -> %p\n", name.data(), (void*)type); fclose(lf); }
-#endif
 
         type->name = CNamePool::Add(name.data());
 
@@ -1106,6 +1138,12 @@ struct ClassDefinition
             SystemBuilder<TClass>::RegisterGetter();
             SystemBuilder<TClass>::RegisterSystem();
         }
+
+        if (auto alias = rtti->GetClassByScriptName(name))
+        {
+            rtti->scriptToNative.InsertOrAssign(name, name);
+            rtti->nativeToScript.InsertOrAssign(name, name);
+        }
     }
 
     inline static TypeInfoRegistrar s_registrar{&RegisterType, &DescribeType}; // NOLINT(cert-err58-cpp)
@@ -1127,10 +1165,6 @@ struct ClassExpansion
         if constexpr (Detail::HasDescribeHandler<Specialization, Descriptor>)
         {
             constexpr auto name = GetTypeName<TClass>();
-#ifdef __APPLE__
-            if (Detail::IsSkippedType("ALL_EXPAND"))
-                return;
-#endif
 
             auto* rtti = CRTTISystem::Get();
             auto* type = reinterpret_cast<Descriptor*>(rtti->GetClass(name));
@@ -1159,18 +1193,8 @@ struct EnumDefinition
     static inline void RegisterType()
     {
         constexpr auto name = GetTypeNameStr<TEnum>();
-#ifdef __APPLE__
-        if (Detail::IsSkippedType("ALL_ENUM"))
-            return;
-#endif
 
-#ifdef __APPLE__
-        // macOS: the game's CEnum may be larger than the SDK's; allocate from the plugin arena with generous padding.
-        auto* type = static_cast<Descriptor*>(Red::Memory::RTTIAllocator::Get()->Alloc(sizeof(Descriptor) + 0x200).memory);
-        new (type) Descriptor();
-#else
         auto* type = new Descriptor();
-#endif
         type->name = CNamePool::Add(name.data());
 
         if constexpr (Detail::HasRegisterHandler<Specialization, Descriptor>)
@@ -1188,8 +1212,6 @@ struct EnumDefinition
 
         auto* rtti = CRTTISystem::Get();
         auto* type = reinterpret_cast<Descriptor*>(rtti->GetEnum(name));
-        if (!type)
-            return;
 
         constexpr auto min = Detail::GetMinValue<Specialization, TEnum>();
         constexpr auto max = Detail::GetMaxValue<Specialization, TEnum>();
@@ -1251,10 +1273,6 @@ struct GlobalDefinition
 
     static inline void Register()
     {
-#ifdef __APPLE__
-        if (Detail::IsSkippedType("ALL_GLOBALS"))
-            return;
-#endif
         if constexpr (Detail::HasRegisterHandler<Specialization, Descriptor>)
         {
             auto* rtti = reinterpret_cast<Descriptor*>(CRTTISystem::Get());
@@ -1264,10 +1282,6 @@ struct GlobalDefinition
 
     static inline void Describe()
     {
-#ifdef __APPLE__
-        if (Detail::IsSkippedType("ALL_GLOBALS"))
-            return;
-#endif
         if constexpr (Detail::HasDescribeHandler<Specialization, Descriptor>)
         {
             auto* rtti = reinterpret_cast<Descriptor*>(CRTTISystem::Get());

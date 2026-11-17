@@ -1,32 +1,7 @@
 #pragma once
 
-
 #ifdef __APPLE__
-#include <dlfcn.h>
-#include <fstream>
-#include <set>
-#include <string>
-#include <filesystem>
-namespace Red::Detail
-{
-static int s_skipAnchor = 0;
-// macOS debugging aid: <plugin dir>/rtti_skip lists type names (one per line) that must not be registered.
-inline bool IsSkippedType(const char* aName)
-{
-    static const std::set<std::string> skipped = [] {
-        std::set<std::string> out;
-        Dl_info info{};
-        if (dladdr(&s_skipAnchor, &info) && info.dli_fname)
-        {
-            std::ifstream in(std::filesystem::path(info.dli_fname).parent_path() / "rtti_skip");
-            for (std::string line; std::getline(in, line);)
-                if (!line.empty()) out.insert(line);
-        }
-        return out;
-    }();
-    return skipped.count(aName) != 0;
-}
-}
+#include <pthread.h>
 #endif
 
 namespace Red
@@ -44,17 +19,11 @@ public:
 
     static inline void RegisterDiscovered()
     {
+        // Assumed to be called at plugin bootstrap, on the game's main thread.
+        s_mainThread = CurrentThreadId();
+
         QueuePendingRegisterCallbacks();
         QueuePendingDescribeCallbacks();
-    }
-
-    // macOS port: the game may run its register/post-register phases before the plugin is loaded, so callbacks
-    // queued through CRTTISystem would never fire. Run the pending ones directly.
-    static inline void RunPendingNow()
-    {
-        fprintf(stderr, "[RedLib macOS] pending register=%zu describe=%zu\n", s_registerCallbacks.size(), s_describeCallbacks.size());
-        ProcessPendingRegisterCallbacks();
-        ProcessPendingDescriberCallbacks();
     }
 
     static inline void AddRegisterCallback(Callback aRegister)
@@ -73,7 +42,23 @@ public:
         }
     }
 
+    static inline bool IsMainThread()
+    {
+        const auto mainThread = s_mainThread.load();
+
+        return mainThread == 0 || mainThread == CurrentThreadId();
+    }
+
 private:
+    static inline uint32_t CurrentThreadId()
+    {
+#ifdef __APPLE__
+        return pthread_mach_thread_np(pthread_self());
+#else
+        return GetCurrentThreadId();
+#endif
+    }
+
     static inline void QueuePendingRegisterCallbacks()
     {
         if (!s_registerCallbacks.empty())
@@ -110,17 +95,20 @@ private:
 
     static inline void OnRegister()
     {
+        fprintf(stderr, "[Codeware RedLib] OnRegister called, processing %zu callbacks\n", s_registerCallbacks.size());
         ProcessPendingRegisterCallbacks();
         QueuePendingRegisterCallbacks();
     }
 
     static inline void OnDescribe()
     {
+        fprintf(stderr, "[Codeware RedLib] OnDescribe called, processing %zu callbacks\n", s_describeCallbacks.size());
         ProcessPendingDescriberCallbacks();
         QueuePendingDescribeCallbacks();
     }
 
     static inline std::vector<Callback> s_registerCallbacks;
     static inline std::vector<Callback> s_describeCallbacks;
+    static inline std::atomic<uint32_t> s_mainThread{0};
 };
 }

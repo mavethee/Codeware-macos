@@ -1,1 +1,0 @@
-public native class questAudioCharacterManagerFootsteps_NodeSubType extends questIAudioCharacterManager_NodeSubType {}

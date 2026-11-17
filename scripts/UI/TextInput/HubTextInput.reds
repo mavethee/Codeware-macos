@@ -172,6 +172,14 @@ public class HubTextInput extends TextInput {
         this.m_focusFrameAnimProxy = this.m_focus.PlayAnimationWithOptions(this.m_focusFrameAnimDef, reverseAnimOpts);
     }
 
+    public func SetCaretToEnd() {
+        this.SetCaretPosition(StrLen(this.GetText()));
+    }
+
+    public func RequestSetFocus() {
+        this.SetFocusedState(true);
+    }
+
     public func ToggleAnimations(useAnimations: Bool) {
         this.m_useAnimations = useAnimations;
         this.CreateAnimations();

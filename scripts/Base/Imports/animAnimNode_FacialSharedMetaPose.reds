@@ -1,1 +1,0 @@
-public native class animAnimNode_FacialSharedMetaPose extends animAnimNode_OnePoseInput {}

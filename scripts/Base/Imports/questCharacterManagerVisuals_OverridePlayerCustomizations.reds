@@ -1,3 +1,0 @@
-public native class questCharacterManagerVisuals_OverridePlayerCustomizations extends questICharacterManagerVisuals_NodeSubType {
-  public native let customizationData: array<gameuiForcePlayerCustomizationData>;
-}

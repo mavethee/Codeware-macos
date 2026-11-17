@@ -1,1 +1,0 @@
-public native class gameEffectObjectFilter_NoWeapon extends gameEffectObjectGroupFilter {}

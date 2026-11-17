@@ -1,1 +1,0 @@
-public native class questResetScanningAngleThreshold_NodeType extends questIVisionModeNodeType {}

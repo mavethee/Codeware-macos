@@ -1,1 +1,0 @@
-public native class gameEffectObjectFilter_NearestWeakspotIfAny extends gameEffectObjectGroupFilter {}

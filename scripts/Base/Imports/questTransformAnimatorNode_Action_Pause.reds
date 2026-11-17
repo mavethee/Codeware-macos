@@ -1,1 +1,0 @@
-public native class questTransformAnimatorNode_Action_Pause extends questTransformAnimatorNode_ActionType {}

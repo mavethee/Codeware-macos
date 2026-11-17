@@ -1,1 +1,0 @@
-public native class inkInitialLoadingControllerSupervisor extends gameuiOnscreenVOPlayerController {}

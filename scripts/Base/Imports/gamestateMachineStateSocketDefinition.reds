@@ -1,1 +1,0 @@
-public native class gamestateMachineStateSocketDefinition extends graphGraphSocketDefinition {}

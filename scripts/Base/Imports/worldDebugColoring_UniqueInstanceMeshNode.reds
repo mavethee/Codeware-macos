@@ -1,1 +1,0 @@
-public native class worldDebugColoring_UniqueInstanceMeshNode extends worldEditorDebugColoringSettings {}

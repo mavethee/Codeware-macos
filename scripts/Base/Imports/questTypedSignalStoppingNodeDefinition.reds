@@ -1,1 +1,0 @@
-public abstract native class questTypedSignalStoppingNodeDefinition extends questSignalStoppingNodeDefinition {}

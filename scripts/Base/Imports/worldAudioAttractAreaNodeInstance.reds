@@ -1,1 +1,0 @@
-public native class worldAudioAttractAreaNodeInstance extends worldTriggerAreaNodeInstance {}

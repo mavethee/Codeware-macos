@@ -1,1 +1,0 @@
-public native class AICTreeNodeSimpleSelectorDefinition extends AICTreeNodeChildrenListDefinition {}

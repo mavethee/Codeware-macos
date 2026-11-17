@@ -1,1 +1,0 @@
-public native class AIbehaviorWaitingKeepMountedCommandConditionDefinition extends AIbehaviorConditionDefinition {}

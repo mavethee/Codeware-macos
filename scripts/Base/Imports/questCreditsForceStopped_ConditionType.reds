@@ -1,1 +1,0 @@
-public native class questCreditsForceStopped_ConditionType extends questIUIConditionType {}

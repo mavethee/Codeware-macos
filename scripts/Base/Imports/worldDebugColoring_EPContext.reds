@@ -1,1 +1,0 @@
-public native class worldDebugColoring_EPContext extends worldEditorDebugColoringSettings {}

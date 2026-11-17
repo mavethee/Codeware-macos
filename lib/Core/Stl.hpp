@@ -1,13 +1,23 @@
 #pragma once
 
+#include <map>
+#include <memory>
+#include <set>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+
+#if defined(_WIN32) || defined(_WIN64)
 #include <TiltedCore/StlAllocator.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
+#endif
 
 namespace Core
 {
 // Pretty much the same as TiltedCore with StlAllocator,
 // but unique ptr allows implicit casting to the base.
+// On macOS, we use standard allocators instead.
 
 namespace Detail
 {
@@ -22,19 +32,22 @@ struct UniqueDeleter
 
     void operator()(std::conditional_t<std::is_array_v<T>, T, T*> aData)
     {
+#if defined(_WIN32) || defined(_WIN64)
         TiltedPhoques::Delete<T>(aData);
+#else
+        delete aData;
+#endif
     }
 };
 }
 
+#if defined(_WIN32) || defined(_WIN64)
+// Windows: Use TiltedPhoques allocators and hopscotch containers
 template<class T>
 using Vector = std::vector<T, TiltedPhoques::StlAllocator<T>>;
 
 template<class T>
 using Set = tsl::hopscotch_set<T, std::hash<T>, std::equal_to<T>, TiltedPhoques::StlAllocator<T>>;
-
-template<class T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
-using SortedSet = std::set<T, Compare, Allocator>;
 
 template<class T, class U>
 using Map = tsl::hopscotch_map<T, U, std::hash<T>, std::equal_to<T>, TiltedPhoques::StlAllocator<std::pair<T, U>>>;
@@ -42,7 +55,48 @@ using Map = tsl::hopscotch_map<T, U, std::hash<T>, std::equal_to<T>, TiltedPhoqu
 template<class T, class U>
 using SortedMap = std::map<T, U, std::less<T>, TiltedPhoques::StlAllocator<std::pair<const T, U>>>;
 
-// TODO: OrderedMap
+#else
+// macOS: Use standard containers with hopscotch-compatible iterator helpers
+template<class T>
+using Vector = std::vector<T>;
+
+template<class T>
+using Set = std::unordered_set<T>;
+
+template<class Key, class Value, class Hash = std::hash<Key>, class Pred = std::equal_to<Key>>
+class Map : public std::unordered_map<Key, Value, Hash, Pred>
+{
+    using Base = std::unordered_map<Key, Value, Hash, Pred>;
+public:
+    using Base::Base;
+
+    template<typename BaseIter>
+    struct IterWrap : public BaseIter
+    {
+        IterWrap() : BaseIter() {}
+        IterWrap(const BaseIter& it) : BaseIter(it) {}
+        const Key& key() const { return BaseIter::operator->()->first; }
+        Value& value() const { return BaseIter::operator->()->second; }
+    };
+
+    using iterator = IterWrap<typename Base::iterator>;
+    using const_iterator = IterWrap<typename Base::const_iterator>;
+
+    iterator begin() noexcept { return iterator(Base::begin()); }
+    const_iterator begin() const noexcept { return const_iterator(Base::begin()); }
+    iterator end() noexcept { return iterator(Base::end()); }
+    const_iterator end() const noexcept { return const_iterator(Base::end()); }
+
+    iterator find(const Key& k) { return iterator(Base::find(k)); }
+    const_iterator find(const Key& k) const { return const_iterator(Base::find(k)); }
+};
+
+template<class T, class U>
+using SortedMap = std::map<T, U>;
+#endif
+
+template<class T, class Compare = std::less<T>, class Allocator = std::allocator<T>>
+using SortedSet = std::set<T, Compare, Allocator>;
 
 template<class T>
 using SharedPtr = std::shared_ptr<T>;
@@ -70,12 +124,20 @@ struct ShareFromThis : public std::enable_shared_from_this<T>
 template<typename T, typename... Args>
 auto MakeShared(Args&&... aArgs)
 {
+#if defined(_WIN32) || defined(_WIN64)
     return std::allocate_shared<T>(TiltedPhoques::StlAllocator<T>(), std::forward<Args>(aArgs)...);
+#else
+    return std::make_shared<T>(std::forward<Args>(aArgs)...);
+#endif
 }
 
 template<typename T, typename... Args>
 auto MakeUnique(Args&&... aArgs)
 {
+#if defined(_WIN32) || defined(_WIN64)
     return UniquePtr<T>(TiltedPhoques::New<T>(std::forward<Args>(aArgs)...));
+#else
+    return UniquePtr<T>(new T(std::forward<Args>(aArgs)...));
+#endif
 }
 }

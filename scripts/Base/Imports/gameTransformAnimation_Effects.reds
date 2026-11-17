@@ -1,1 +1,0 @@
-public abstract native class gameTransformAnimation_Effects extends gameTransformAnimationTrackItemImpl {}

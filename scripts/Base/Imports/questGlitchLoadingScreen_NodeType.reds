@@ -1,1 +1,0 @@
-public native class questGlitchLoadingScreen_NodeType extends questIUIManagerNodeType {}

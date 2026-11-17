@@ -1,1 +1,0 @@
-public native class gameEffectExecutor_PhysicalImpulseFromInstigator extends EffectExecutor {}

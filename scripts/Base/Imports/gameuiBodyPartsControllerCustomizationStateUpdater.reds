@@ -1,1 +1,0 @@
-public native class gameuiBodyPartsControllerCustomizationStateUpdater extends gameuiICustomizationStateUpdater {}

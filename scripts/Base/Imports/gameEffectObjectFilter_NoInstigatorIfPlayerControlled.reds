@@ -1,1 +1,0 @@
-public native class gameEffectObjectFilter_NoInstigatorIfPlayerControlled extends EffectObjectSingleFilter {}

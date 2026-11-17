@@ -1,1 +1,0 @@
-public abstract native class questIEntityManagerSetAttachment_NodeSubType extends questIEntityManager_NodeSubType {}

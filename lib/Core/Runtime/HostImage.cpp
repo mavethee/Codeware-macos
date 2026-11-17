@@ -1,4 +1,6 @@
 #include "HostImage.hpp"
+
+#if defined(_WIN32) || defined(_WIN64)
 #include "Core/Win.hpp"
 
 Core::HostImage::HostImage(int aExePathDepth)
@@ -19,50 +21,8 @@ Core::HostImage::HostImage(int aExePathDepth)
     TryResolveVersion(filePath);
 }
 
-uintptr_t Core::HostImage::GetBase() const
-{
-    return m_base;
-}
-
-std::filesystem::path Core::HostImage::GetPath() const
-{
-    return m_exe;
-}
-
-std::string Core::HostImage::GetName() const
-{
-    return m_exe.stem().string();
-}
-
-std::filesystem::path Core::HostImage::GetRootDir() const
-{
-    return m_root;
-}
-
-const Core::FileVer& Core::HostImage::GetFileVer() const
-{
-    return m_fileVer;
-}
-
-const Core::SemvVer& Core::HostImage::GetProductVer() const
-{
-    return m_productVer;
-}
-
 bool Core::HostImage::TryResolveVersion(const std::wstring& filePath)
 {
-#ifdef __APPLE__
-    // macOS: no PE version resource. The port targets a single game build (2.3.1 -> 2.31).
-    (void)filePath;
-    m_fileVer.major = 2;
-    m_fileVer.minor = 31;
-    m_fileVer.build = 0;
-    m_fileVer.revision = 0;
-    m_productVer.major = 2;
-    m_productVer.minor = 31;
-    m_productVer.patch = 0;
-    return true;
-#else
     auto size = GetFileVersionInfoSizeW(filePath.c_str(), nullptr);
     if (!size)
         return false;
@@ -94,5 +54,75 @@ bool Core::HostImage::TryResolveVersion(const std::wstring& filePath)
     m_productVer.patch = (fileInfo->dwProductVersionLS >> 16) & 0xFFFF;
 
     return true;
-#endif
+}
+
+#else // macOS
+
+#include "Core/macOS.hpp"
+
+Core::HostImage::HostImage(int aExePathDepth)
+{
+    // Get base address from dyld
+    m_base = Core::Platform::GetImageBase();
+
+    // Get executable path
+    std::string filePath = Core::Platform::GetModuleFileName(nullptr);
+    m_exe = filePath;
+    m_root = m_exe.parent_path();
+
+    while (--aExePathDepth >= 0)
+        m_root = m_root.parent_path();
+
+    TryResolveVersion(filePath);
+}
+
+bool Core::HostImage::TryResolveVersion(const std::string& /*filePath*/)
+{
+    // On macOS, we hardcode the game version since there's no equivalent
+    // to Windows GetFileVersionInfo. The game version can be determined
+    // from the Info.plist or by other means if needed.
+
+    // Default to a known Cyberpunk 2077 macOS version.
+    m_fileVer.major = 2;
+    m_fileVer.minor = 21;
+    m_fileVer.build = 0;
+    m_fileVer.revision = 0;
+
+    m_productVer.major = 2;
+    m_productVer.minor = 21;
+    m_productVer.patch = 0;
+
+    return true;
+}
+
+#endif // Platform
+
+uintptr_t Core::HostImage::GetBase() const
+{
+    return m_base;
+}
+
+std::filesystem::path Core::HostImage::GetPath() const
+{
+    return m_exe;
+}
+
+std::string Core::HostImage::GetName() const
+{
+    return m_exe.stem().string();
+}
+
+std::filesystem::path Core::HostImage::GetRootDir() const
+{
+    return m_root;
+}
+
+const Core::FileVer& Core::HostImage::GetFileVer() const
+{
+    return m_fileVer;
+}
+
+const Core::SemvVer& Core::HostImage::GetProductVer() const
+{
+    return m_productVer;
 }

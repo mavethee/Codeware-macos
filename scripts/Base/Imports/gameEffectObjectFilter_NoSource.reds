@@ -1,1 +1,0 @@
-public native class gameEffectObjectFilter_NoSource extends gameEffectObjectGroupFilter {}

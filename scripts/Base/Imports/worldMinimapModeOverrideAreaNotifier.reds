@@ -1,1 +1,0 @@
-public native class worldMinimapModeOverrideAreaNotifier extends worldITriggerAreaNotifer {}

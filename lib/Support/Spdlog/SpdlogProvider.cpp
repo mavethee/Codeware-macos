@@ -4,6 +4,8 @@
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+#include <fstream>
+#include <iostream>
 
 void Support::SpdlogProvider::OnInitialize()
 {
@@ -63,13 +65,25 @@ void Support::SpdlogProvider::OnInitialize()
         logPath.replace_extension(logExtension);
     }
 
+    m_resolvedLogPath = logPath;
+
+#if defined(_WIN32) || defined(_WIN64)
+    auto level = m_debugOutput ? spdlog::level::trace : spdlog::level::info;
     auto sink = Core::MakeShared<spdlog::sinks::rotating_file_sink_mt>(logPath.string(), m_maxPartSize, m_maxPartCount);
     auto logger = Core::MakeShared<spdlog::logger>("", spdlog::sinks_init_list{sink});
     logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%t] [%l] %v");
-    logger->flush_on(spdlog::level::trace);
+    logger->flush_on(level);
 
-    m_logger = logger;
-    logger->set_level(spdlog::level::trace);
+    spdlog::set_default_logger(logger);
+    spdlog::set_level(level);
+#else
+    // macOS: avoid spdlog runtime issues during early injection; write to file manually.
+    // Ensure the log file exists early so users can tail it even if later steps crash.
+    std::error_code ec;
+    std::filesystem::create_directories(m_resolvedLogPath.parent_path(), ec);
+    std::ofstream f(m_resolvedLogPath, std::ios::app);
+    (void)f;
+#endif
 
     if (m_recentSymlink && logPath != m_baseLogPath)
     {
@@ -83,30 +97,80 @@ void Support::SpdlogProvider::OnInitialize()
 
 void Support::SpdlogProvider::LogInfo(const std::string_view& aMessage)
 {
-    if (m_logger)
-        m_logger->info(aMessage);
+#if !defined(_WIN32) && !defined(_WIN64)
+    {
+        std::scoped_lock _{m_logMutex};
+        if (OpenLog())
+        {
+            m_logFile << "[INFO] " << aMessage << '\n';
+        }
+    }
+#else
+    spdlog::default_logger_raw()->info(aMessage);
+#endif
 }
 
 void Support::SpdlogProvider::LogWarning(const std::string_view& aMessage)
 {
-    if (m_logger)
-        m_logger->warn(aMessage);
+#if !defined(_WIN32) && !defined(_WIN64)
+    {
+        std::scoped_lock _{m_logMutex};
+        if (OpenLog())
+        {
+            m_logFile << "[WARN] " << aMessage << '\n';
+            m_logFile.flush();
+        }
+    }
+#else
+    spdlog::default_logger_raw()->warn(aMessage);
+#endif
 }
 
 void Support::SpdlogProvider::LogError(const std::string_view& aMessage)
 {
-    if (m_logger)
-        m_logger->error(aMessage);
+#if !defined(_WIN32) && !defined(_WIN64)
+    {
+        std::scoped_lock _{m_logMutex};
+        if (OpenLog())
+        {
+            m_logFile << "[ERROR] " << aMessage << '\n';
+            m_logFile.flush();
+        }
+    }
+#else
+    spdlog::default_logger_raw()->error(aMessage);
+#endif
 }
 
 void Support::SpdlogProvider::LogDebug(const std::string_view& aMessage)
 {
-    if (m_logger)
-        m_logger->debug(aMessage);
+#if !defined(_WIN32) && !defined(_WIN64)
+    {
+        std::scoped_lock _{m_logMutex};
+        if (OpenLog())
+        {
+            m_logFile << "[DEBUG] " << aMessage << '\n';
+        }
+    }
+#else
+    spdlog::default_logger_raw()->debug(aMessage);
+#endif
 }
 
 void Support::SpdlogProvider::LogFlush()
 {
-    if (m_logger)
-        m_logger->flush();
+#if defined(_WIN32) || defined(_WIN64)
+    spdlog::default_logger_raw()->flush();
+#else
+    std::scoped_lock _{m_logMutex};
+    if (m_logFile.is_open())
+        m_logFile.flush();
+#endif
+}
+
+bool Support::SpdlogProvider::OpenLog()
+{
+    if (!m_logFile.is_open() && !m_resolvedLogPath.empty())
+        m_logFile.open(m_resolvedLogPath, std::ios::app);
+    return m_logFile.is_open();
 }
